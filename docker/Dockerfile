@@ -29,12 +29,15 @@ WORKDIR /app
 # Create non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy built artifacts from builder
-COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
-COPY --from=builder --chown=appuser:appgroup /app/dist         ./dist        2>/dev/null || true
-COPY --from=builder --chown=appuser:appgroup /app/.next        ./.next       2>/dev/null || true
-COPY --from=builder --chown=appuser:appgroup /app/public       ./public      2>/dev/null || true
-COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
+# Copy required artifacts from builder
+COPY --from=builder --chown=appuser:appgroup /app/node_modules  ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/package.json  ./package.json
+
+# Copy optional build outputs (only copy if they exist in the builder stage)
+RUN --mount=type=bind,from=builder,source=/app,target=/build \
+    for dir in dist .next public; do \
+      [ -d "/build/$dir" ] && cp -r "/build/$dir" "./$dir" || true; \
+    done && chown -R appuser:appgroup .
 
 USER appuser
 
