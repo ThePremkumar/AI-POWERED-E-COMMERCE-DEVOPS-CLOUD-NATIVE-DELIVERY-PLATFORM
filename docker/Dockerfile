@@ -5,7 +5,7 @@
 # ── Stage 1: Builder ──────────────────────────────────────────
 FROM node:20-alpine AS builder
 
-LABEL maintainer="Davine Technologies"
+LABEL maintainer="Cloud Native DevOps Team"
 LABEL project="AI-Powered E-Commerce DevOps Platform"
 
 WORKDIR /app

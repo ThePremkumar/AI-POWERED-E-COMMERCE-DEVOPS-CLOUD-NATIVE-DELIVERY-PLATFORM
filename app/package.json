@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.copyFileSync('server.js', 'dist/server.js');\"",
+    "build": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.copyFileSync('server.js', 'dist/server.js'); if(!fs.existsSync('dist/public')) fs.mkdirSync('dist/public', {recursive:true}); if(fs.existsSync('public/index.html')) fs.copyFileSync('public/index.html', 'dist/public/index.html');\"",
     "lint": "node -e \"console.log('Linting passed: 0 errors')\"",
     "test": "node --test"
   },
@@ -14,6 +14,6 @@
     "devops",
     "cloud-native"
   ],
-  "author": "Davine Technologies",
+  "author": "Open-Source Cloud DevOps Community",
   "license": "MIT"
 }
