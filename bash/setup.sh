@@ -21,8 +21,9 @@ log "Detected OS: $OS"
 # ── Check required binaries ──────────────────────────────────
 REQUIRED_BINS=(git docker curl wget unzip)
 for bin in "${REQUIRED_BINS[@]}"; do
+  # FIX: quote the command -v argument to handle bins with spaces
   if command -v "$bin" &>/dev/null; then
-    log "  ✔  $bin found: $(command -v $bin)"
+    log "  ✔  $bin found: $(command -v "$bin")"
   else
     log "  ✘  $bin NOT found – please install it and rerun."
     exit 1
@@ -44,8 +45,16 @@ DIRS=(
   "bash"
   "docker"
   "jenkins"
-  "terraform/modules"
-  "ansible/roles"
+  "terraform/modules/vpc"
+  "terraform/modules/ec2"
+  "terraform/modules/rds"
+  "terraform/modules/eks"
+  "ansible/roles/common/tasks"
+  "ansible/roles/docker/tasks"
+  "ansible/roles/app_user/tasks"
+  "ansible/roles/app_deploy/tasks"
+  "ansible/roles/monitoring_agent/tasks"
+  "ansible/inventory"
   "kubernetes/manifests"
   "helm/ecommerce/templates"
   "monitoring/prometheus"
@@ -54,7 +63,8 @@ DIRS=(
   "logging/logstash"
   "logging/kibana"
   "security/scanning"
-  "ai"
+  "security/reports"
+  "ai/reports"
   "docs"
   "logs"
   "backups"
@@ -64,12 +74,26 @@ for d in "${DIRS[@]}"; do
   log "  Created: $d"
 done
 
+# ── Make bash scripts executable ─────────────────────────────
+# FIX: scripts lose +x on Windows checkouts; restore here
+log "Setting execute permissions on bash scripts..."
+for script in bash/*.sh; do
+  chmod +x "$script"
+  log "  chmod +x $script"
+done
+
 # ── Copy environment template ─────────────────────────────────
 if [[ ! -f ".env" ]]; then
-  cp .env.example .env 2>/dev/null || true
-  log "Copied .env.example → .env (fill in your values)"
+  if cp .env.example .env 2>/dev/null; then
+    log "Copied .env.example → .env (fill in your values)"
+  else
+    log "WARNING: .env.example not found – skipping .env creation"
+  fi
 fi
 
+# ── Print summary ─────────────────────────────────────────────
 log "============================================================"
 log " Setup Complete"
+log " Next step: edit .env with your values, then run:"
+log "   cd docker && docker compose up -d"
 log "============================================================"
