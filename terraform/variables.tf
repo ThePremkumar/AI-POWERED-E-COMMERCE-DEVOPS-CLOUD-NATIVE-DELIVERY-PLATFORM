@@ -50,11 +50,8 @@ variable "instance_type" {
   default     = "t3.medium"
 }
 
-variable "ami_id" {
-  description = "AMI ID to use for EC2 instances (Ubuntu 22.04)"
-  type        = string
-  default     = "ami-0c7217cdde317cfec"  # Ubuntu 22.04 LTS us-east-1
-}
+# NOTE: ami_id variable removed — AMI is now resolved dynamically via the
+# aws_ami data source in main.tf (always fetches latest Ubuntu 22.04 LTS).
 
 variable "key_name" {
   description = "EC2 key pair name for SSH access"
