@@ -1,0 +1,16 @@
+---
+# =============================================================================
+# configmap.yml – Application Configuration
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+  namespace: ecommerce
+data:
+  NODE_ENV:    "production"
+  PORT:        "3000"
+  LOG_LEVEL:   "info"
+  REDIS_HOST:  "redis-service"
+  REDIS_PORT:  "6379"

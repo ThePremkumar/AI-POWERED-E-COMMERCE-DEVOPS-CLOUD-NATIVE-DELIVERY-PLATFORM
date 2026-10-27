@@ -1,0 +1,29 @@
+---
+# =============================================================================
+# ingress.yml – Kubernetes Ingress (NGINX Ingress Controller)
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-ingress
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target:       /
+    nginx.ingress.kubernetes.io/proxy-body-size:       10m
+    nginx.ingress.kubernetes.io/proxy-read-timeout:    "60"
+    nginx.ingress.kubernetes.io/ssl-redirect:          "false"
+    nginx.ingress.kubernetes.io/use-regex:             "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ecommerce.example.com    # ← Change to your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecommerce-app
+                port:
+                  number: 80

@@ -1,0 +1,21 @@
+---
+# =============================================================================
+# vars/main.yml – Ansible shared variables
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+
+# Application
+app_user:     "appuser"
+app_group:    "appgroup"
+app_dir:      "/opt/ecommerce"
+app_port:     3000
+
+# Docker
+docker_compose_version: "2.24.0"
+
+# Node.js
+nodejs_version: "20"
+
+# Monitoring
+node_exporter_version: "1.7.0"
+node_exporter_port:    9100

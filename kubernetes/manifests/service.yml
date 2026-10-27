@@ -1,0 +1,21 @@
+---
+# =============================================================================
+# service.yml – Kubernetes Service
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-app
+  namespace: ecommerce
+  labels:
+    app: ecommerce-app
+spec:
+  type: ClusterIP
+  selector:
+    app: ecommerce-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP

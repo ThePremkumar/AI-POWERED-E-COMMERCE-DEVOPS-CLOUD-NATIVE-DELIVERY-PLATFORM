@@ -1,0 +1,13 @@
+---
+# =============================================================================
+# namespace.yml – Kubernetes Namespace
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    environment: production
+    project: ai-powered-ecommerce-devops

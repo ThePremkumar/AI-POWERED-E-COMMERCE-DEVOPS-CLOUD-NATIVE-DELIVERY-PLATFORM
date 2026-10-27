@@ -1,0 +1,68 @@
+# =============================================================================
+# prometheus.yml – Prometheus scrape configuration
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# =============================================================================
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  scrape_timeout:      10s
+
+  external_labels:
+    project:     "ai-ecommerce-devops"
+    environment: "production"
+
+# ── Alerting rules ────────────────────────────────────────────
+rule_files:
+  - "alert_rules.yml"
+
+# ── Alertmanager ──────────────────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []  # Add: alertmanager:9093
+
+# ── Scrape jobs ───────────────────────────────────────────────
+scrape_configs:
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Application – expose /metrics from your Node.js app
+  - job_name: "ecommerce-app"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["frontend:3000", "backend:5000"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Node Exporter (host metrics)
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # cAdvisor (container metrics)
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # Kubernetes pods (if deployed in-cluster)
+  - job_name: "kubernetes-pods"
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__

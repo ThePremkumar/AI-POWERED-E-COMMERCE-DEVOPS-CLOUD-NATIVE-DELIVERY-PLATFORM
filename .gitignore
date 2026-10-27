@@ -1,0 +1,113 @@
+# ============================================================
+# AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+# .gitignore
+# ============================================================
+
+# ── OS & Editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# ── Secrets & Credentials ───────────────────────────────────
+*.env
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+vault-token
+kubeconfig
+*_rsa
+*_rsa.pub
+*_ed25519
+*_ed25519.pub
+
+# ── Terraform ───────────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform.lock.hcl
+terraform.tfvars
+!terraform.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+
+# ── Ansible ─────────────────────────────────────────────────
+ansible/inventory/hosts
+ansible/*.retry
+*.retry
+
+# ── Docker ──────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Kubernetes / Helm ───────────────────────────────────────
+charts/*/charts/
+charts/*/tmpcharts/
+*.tgz
+
+# ── Jenkins ─────────────────────────────────────────────────
+jenkins/workspace/
+jenkins/jobs/
+jenkins/logs/
+
+# ── Node.js (e-commerce app) ────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+dist/
+build/
+.next/
+.cache/
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+*.egg
+
+# ── Logs ────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ── Monitoring Data ─────────────────────────────────────────
+prometheus/data/
+grafana/data/
+
+# ── Backup Files ────────────────────────────────────────────
+backups/
+*.bak
+*.backup
+*.tar.gz
+*.zip
+
+# ── Miscellaneous ───────────────────────────────────────────
+tmp/
+temp/
+.tmp/
+coverage/
+.nyc_output/
