@@ -106,7 +106,7 @@ Navigate to **Manage Jenkins → Credentials → System → Global**:
 
 | ID | Type | Value |
 |----|------|-------|
-| `docker-hub-credentials` | Username/Password | Your Docker Hub login |
+| `dockerhub-creds` | Username/Password | Your Docker Hub login |
 | `kubeconfig-credentials` | Secret File | Your `~/.kube/config` |
 | `sonar-token` | Secret Text | SonarQube token |
 | `github-token` | Secret Text | GitHub personal access token |
