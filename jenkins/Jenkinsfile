@@ -189,14 +189,6 @@ pipeline {
                     fi
                 """
             }
-            post {
-                always {
-                    archiveArtifacts(
-                        artifacts: "trivy-report.json",
-                        allowEmptyArchive: true
-                    )
-                }
-            }
         }
 
         // ── Stage 9: Push Image ───────────────────────────────────
@@ -260,16 +252,17 @@ pipeline {
 
     post {
         always {
-            script {
-                // Archive reports only when a workspace is available.
-                try {
-                    archiveArtifacts(
-                        artifacts: "**/*-report.json",
-                        allowEmptyArchive: true,
-                        fingerprint: true
-                    )
-                } catch (err) {
-                    echo "WARNING: Could not archive reports: ${err.getMessage()}"
+            node('') {
+                script {
+                    try {
+                        archiveArtifacts(
+                            artifacts: "**/*-report.json",
+                            allowEmptyArchive: true,
+                            fingerprint: true
+                        )
+                    } catch (err) {
+                        echo "WARNING: Could not archive reports: ${err.getMessage()}"
+                    }
                 }
             }
         }
