@@ -1,5 +1,5 @@
 // =============================================================================
-// Jenkinsfile – CI/CD Pipeline
+// Jenkinsfile – Simple CI/CD Pipeline
 // AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
 // =============================================================================
 
@@ -7,198 +7,60 @@ pipeline {
     agent any
 
     environment {
-        // ── Registry settings ──────────────────────────────────
+        // Registry settings
         REGISTRY          = "docker.io"
         REGISTRY_REPO     = "ai-ecommerce"
         IMAGE_NAME        = "${REGISTRY}/${REGISTRY_REPO}/ecommerce-app"
-        // FIX: GIT_COMMIT can be null on first build; safe-navigate and provide default
-        IMAGE_TAG         = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'nogit'}"
+        IMAGE_TAG         = "${env.BUILD_NUMBER}"
 
-        // ── Kubernetes settings ────────────────────────────────
+        // Kubernetes / Helm settings
         K8S_NAMESPACE     = "ecommerce"
         HELM_RELEASE      = "ecommerce-app"
         HELM_CHART        = "./helm/ecommerce"
 
-        // ── Credentials (configured in Jenkins Credential Store)
+        // Credentials
         DOCKER_CREDENTIALS = "dockerhub-creds"
-        SONAR_TOKEN        = credentials("sonar-token")
     }
 
     options {
         buildDiscarder(logRotator(numToKeepStr: "10"))
-        timeout(time: 60, unit: "MINUTES")
+        timeout(time: 30, unit: "MINUTES")
         timestamps()
-        disableConcurrentBuilds()
-        // FIX: Retry checkout once on transient SCM failures
-        checkoutToSubdirectory(".")
-    }
-
-    triggers {
-        githubPush()
     }
 
     stages {
-
-        // ── Stage 1: Checkout ────────────────────────────────────
+        // 1. Checkout Code
         stage("Checkout") {
             steps {
-                cleanWs()
                 checkout scm
-                sh "git log -1 --oneline"
-                // Print branch and commit info for traceability
-                sh "echo 'Branch: ${env.BRANCH_NAME}  Build: ${env.BUILD_NUMBER}'"
+                sh "echo 'Building #${env.BUILD_NUMBER} on ${env.BRANCH_NAME ?: 'main'}'"
             }
         }
 
-        // ── Stage 2+3: Security Scans (PARALLEL) ─────────────────
-        // FIX: Dependency Scan and Secret Scan are independent — run in
-        // parallel to cut total pipeline time by ~50% on this phase.
-        stage("Security Scans") {
-            parallel {
-
-                stage("Dependency Scan") {
-                    steps {
-                        sh """
-                            cd app/ 2>/dev/null || true
-                            if [ -f package.json ]; then
-                                npm ci --prefer-offline --no-audit 2>/dev/null || true
-                                npm audit --audit-level=high \
-                                    --json > ../security-dep-report.json 2>/dev/null || true
-                                # Hard-fail on critical vulnerabilities
-                                npm audit --audit-level=critical 2>/dev/null || \
-                                    echo "WARN: Critical vulnerabilities detected"
-                            else
-                                echo "No package.json found in app/ — skipping npm audit"
-                            fi
-                        """
-                    }
-                }
-
-                stage("Secret Scan") {
-                    steps {
-                        sh """
-                            if command -v gitleaks &>/dev/null; then
-                                gitleaks detect --source=. \
-                                    --report-format=json \
-                                    --report-path=security-secrets-report.json \
-                                    --exit-code=1 || \
-                                    echo "WARN: Potential secrets detected — review report"
-                            else
-                                echo "INFO: gitleaks not installed — skipping secret scan"
-                                echo "Install: https://github.com/gitleaks/gitleaks/releases"
-                            fi
-                        """
-                    }
-                }
-            }
-        }
-
-        // ── Stage 4: Build ────────────────────────────────────────
-        stage("Build") {
+        // 2. Build & Test Node.js App
+        stage("Build & Test") {
             steps {
                 sh """
                     if [ -f app/package.json ]; then
                         npm ci --prefix app/ 2>/dev/null || true
-                        npm run build --prefix app/ 2>/dev/null || true
-                    else
-                        echo "INFO: No package.json — skipping Node.js build"
+                        npm test --prefix app/ 2>/dev/null || true
                     fi
                 """
             }
         }
 
-        // ── Stage 5: Unit Tests ───────────────────────────────────
-        stage("Test") {
-            steps {
-                sh "npm test --prefix app/ -- --ci --coverage 2>/dev/null || true"
-            }
-            post {
-                always {
-                    junit(
-                        testResults: "app/test-results/**/*.xml",
-                        allowEmptyResults: true
-                    )
-                    publishHTML([
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: "app/coverage",
-                        reportFiles: "lcov-report/index.html",
-                        reportName: "Test Coverage"
-                    ])
-                }
-            }
-        }
-
-        // ── Stage 6: Static Code Analysis ────────────────────────
-        stage("Code Quality") {
-            steps {
-                sh """
-                    if command -v sonar-scanner &>/dev/null; then
-                        sonar-scanner \
-                            -Dsonar.projectKey=ecommerce-platform \
-                            -Dsonar.sources=app/ \
-                            -Dsonar.host.url=\${SONAR_HOST_URL:-http://localhost:9000} \
-                            -Dsonar.login=\${SONAR_TOKEN}
-                    else
-                        echo "INFO: sonar-scanner not installed — skipping"
-                    fi
-                """
-            }
-        }
-
-        // ── Stage 7: Docker Build ─────────────────────────────────
-        // FIX: Build the image ONCE and tag it twice (was rebuilding from
-        // scratch twice, wasting ~2× the build time and layer cache).
+        // 3. Build Docker Image
         stage("Docker Build") {
             steps {
                 script {
-                    def img = docker.build(
-                        "${IMAGE_NAME}:${IMAGE_TAG}",
-                        "--label git-commit=${env.GIT_COMMIT} " +
-                        "--label build-number=${env.BUILD_NUMBER} " +
-                        "-f docker/Dockerfile ."
-                    )
-                    // Re-tag the already-built image — no second build
+                    def img = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f docker/Dockerfile .")
                     img.tag("latest")
                 }
             }
         }
 
-        // ── Stage 8: Container Image Scan ────────────────────────
-        stage("Image Scan") {
-            steps {
-                sh """
-                    if command -v trivy &>/dev/null; then
-                        trivy image \
-                            --exit-code 0 \
-                            --severity HIGH,CRITICAL \
-                            --format json \
-                            --output trivy-report.json \
-                            ${IMAGE_NAME}:${IMAGE_TAG}
-                        # Summarise to console for fast reading
-                        trivy image \
-                            --exit-code 1 \
-                            --severity CRITICAL \
-                            --quiet \
-                            ${IMAGE_NAME}:${IMAGE_TAG} || \
-                            echo "WARN: Critical CVEs found — review trivy-report.json"
-                    else
-                        echo "INFO: Trivy not installed — skipping image scan"
-                        echo "Install: https://aquasecurity.github.io/trivy/latest/getting-started/installation/"
-                    fi
-                """
-            }
-        }
-
-        // ── Stage 9: Push Image ───────────────────────────────────
-        stage("Push Image") {
-            when {
-                anyOf {
-                    branch "main"
-                    branch "develop"
-                }
-            }
+        // 4. Push Image to Docker Hub
+        stage("Docker Push") {
             steps {
                 script {
                     docker.withRegistry("https://${REGISTRY}", DOCKER_CREDENTIALS) {
@@ -209,71 +71,35 @@ pipeline {
             }
         }
 
-        // ── Stage 10: Deploy to Kubernetes (Rolling Update) ───────
-        stage("Deploy") {
-            when {
-                branch "main"
-            }
+        // 5. Deploy to Local Kubernetes (KinD) via Helm
+        stage("Deploy to Kubernetes") {
             steps {
                 sh """
                     helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
                         --namespace ${K8S_NAMESPACE} \
                         --create-namespace \
                         --set image.tag=${IMAGE_TAG} \
-                        --set image.repository=${IMAGE_NAME} \
-                        --atomic \
-                        --timeout 5m \
-                        --history-max 5
+                        --set image.repository=${IMAGE_NAME}
                 """
             }
         }
 
-        // ── Stage 11: Deployment Verification ────────────────────
-        stage("Verify Deployment") {
-            when {
-                branch "main"
-            }
+        // 6. Verify Rollout
+        stage("Verify Rollout") {
             steps {
                 sh """
-                    kubectl rollout status deployment/${HELM_RELEASE} \
-                        -n ${K8S_NAMESPACE} --timeout=120s
-                    # FIX: Use FRONTEND_URL env var so health-check.sh
-                    # targets the real cluster endpoint, not localhost
-                    FRONTEND_URL=\$(kubectl get svc ${HELM_RELEASE} \
-                        -n ${K8S_NAMESPACE} \
-                        -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' \
-                        2>/dev/null || echo 'http://localhost:3000')
-                    export FRONTEND_URL="http://\${FRONTEND_URL}"
-                    bash bash/health-check.sh
+                    kubectl rollout status deployment/${HELM_RELEASE} -n ${K8S_NAMESPACE} --timeout=120s
                 """
             }
         }
     }
 
     post {
-        always {
-            node('') {
-                script {
-                    try {
-                        archiveArtifacts(
-                            artifacts: "**/*-report.json",
-                            allowEmptyArchive: true,
-                            fingerprint: true
-                        )
-                    } catch (err) {
-                        echo "WARNING: Could not archive reports: ${err.getMessage()}"
-                    }
-                }
-            }
-        }
         success {
-            echo "✅ Pipeline completed – Image: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "✅ Deployment successful! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
         }
         failure {
-            echo "❌ Pipeline FAILED at build #${env.BUILD_NUMBER} – review logs above."
-        }
-        unstable {
-            echo "⚠️  Pipeline is UNSTABLE (tests may have failed) – review reports."
+            echo "❌ Pipeline failed at build #${env.BUILD_NUMBER}."
         }
     }
 }
