@@ -2,7 +2,7 @@
 
 # 🚀 AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
 
-**Davine Technologies – DevOps Domain Project**
+**Production-Grade DevOps & Cloud-Native Delivery Platform**
 
 [![CI](https://github.com/ThePremkumar/AI-POWERED-E-COMMERCE-DEVOPS-CLOUD-NATIVE-DELIVERY-PLATFORM/actions/workflows/ci.yml/badge.svg)](https://github.com/ThePremkumar/AI-POWERED-E-COMMERCE-DEVOPS-CLOUD-NATIVE-DELIVERY-PLATFORM/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -693,13 +693,13 @@ cp .env.example .env
 
 ## 📄 License
 
-This project is created for the **Davine Technologies DevOps Internship Program**.
+This project is created for the **DevOps Internship Program**.
 
 ---
 
 <div align="center">
 
-**Built with ❤️ by the Davine Technologies DevOps Team**
+**Built with ❤️ by the DevOps Team**
 
 *Linux • Git • Docker • Jenkins • Terraform • Ansible • Kubernetes • Helm • Prometheus • Grafana • ELK • DevSecOps • AI • AWS*
 
