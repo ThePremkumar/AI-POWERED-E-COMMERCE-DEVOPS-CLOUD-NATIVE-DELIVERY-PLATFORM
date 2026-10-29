@@ -26,6 +26,7 @@
 - [Technology Stack](#-technology-stack)
 - [Repository Structure](#-repository-structure)
 - [Architecture Overview](#-architecture-overview)
+- [Live Production Evidence & Screenshots](#-live-production-evidence--screenshots)
 - [Quick Start](#-quick-start)
 - [Component Details](#-component-details)
   - [Linux Environment](#linux-environment)
@@ -224,6 +225,144 @@ AWS Account
 ```
 
 ---
+
+## 📸 Live Production Evidence & Screenshots
+
+The following visual artifacts document the live, operational deployment of the **AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform**. Every screenshot captures active platform verification across Jenkins CI/CD, Docker Hub, Kubernetes (KinD), microservice endpoints, Prometheus metrics collection, and Grafana telemetry.
+
+---
+
+### 1. CI/CD Pipeline Automation (Jenkins)
+
+#### 🔹 Figure 1: Jenkins Declarative Pipeline — 8 Stages Fully Automated (Build #22)
+* **Target:** `http://localhost:8080/job/Full%20Pipeline/`
+* **Technical Explanation:** Demonstrates complete end-to-end continuous delivery. When code is pushed to GitHub, Jenkins executes all 8 sequential stages without manual intervention: **Checkout SCM ➔ Checkout ➔ Build & Test ➔ Docker Build ➔ Docker Push ➔ Deploy to Kubernetes ➔ Verify Rollout ➔ Post Actions**. All stages completed with green checkmarks in under 60 seconds.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113047.png" alt="Jenkins Full Pipeline All Stages Green" width="920"/>
+</p>
+
+#### 🔹 Figure 2: Jenkins Stage Detail — Docker Build & Push Execution Logs
+* **Target:** `http://localhost:8080/job/Full%20Pipeline/stages/`
+* **Technical Explanation:** Shows detailed console logs during container artifact publication. Jenkins securely injects Docker Hub credentials using `withCredentials` over `stdin`, pushes tagged layers (`:22` and `:latest`), logs out cleanly, and confirms the generated cryptographic sha256 image digest.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113141.png" alt="Jenkins Docker Push Logs" width="920"/>
+</p>
+
+---
+
+### 2. Container Artifact Distribution (Docker Hub)
+
+#### 🔹 Figure 3: Docker Hub Public Repository & Versioned Tags (`thepremkumar/ecommerce-app`)
+* **Target:** `https://hub.docker.com/r/thepremkumar/ecommerce-app/tags`
+* **Technical Explanation:** Validates published immutable container artifacts on Docker Hub. Each build generates a versioned tag (`:22`, `:21`, `:20`, `:19`, `:18`, `:17`) alongside `:latest` with a compressed image size of ~48.37 MB. This provides full traceability and guarantees instant rollback to any previous release.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20105904.png" alt="Docker Hub Repository Tags" width="920"/>
+</p>
+
+#### 🔹 Figure 4: Docker Hub Repository Architecture & Namespace Configuration
+* **Target:** `https://hub.docker.com/r/thepremkumar/ecommerce-app`
+* **Technical Explanation:** Displays repository overview following resolution of the Docker Hub 3-segment naming collision. Confirms proper registration under standard two-segment convention (`<username>/<repository>`).
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20101454.png" alt="Docker Hub Repository Overview" width="920"/>
+</p>
+
+---
+
+### 3. Kubernetes Orchestration & Cluster State
+
+#### 🔹 Figure 5: Kubernetes Workload State in `ecommerce` Namespace
+* **Command:** `kubectl --context kind-k8s get all -n ecommerce`
+* **Technical Explanation:** Terminal verification demonstrating active cluster state in the KinD cluster:
+  * **Pods:** 3 healthy replicas (`ecommerce-app-7d444d8d94-*`) running across cluster nodes.
+  * **Service:** `ecommerce-app` ClusterIP service mapping internal port 80 to container targetPort 3000.
+  * **Deployment:** `ecommerce-app` reporting `3/3` ready, up-to-date, and available replicas with zero crash loops.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113200.png" alt="Kubernetes Pods and Service Status" width="850"/>
+</p>
+
+---
+
+### 4. Live Application Frontend & Microservice APIs
+
+#### 🔹 Figure 6: NexusOps E-Commerce Web Application — Live Storefront UI
+* **Target:** `http://localhost:8888/`
+* **Technical Explanation:** User-facing frontend of the cloud-native e-commerce microservice running inside Kubernetes, accessed via local port-forward. Displays dynamic catalog items, cloud architecture blueprints, pricing, and modern responsive design.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113408.png" alt="NexusOps Web Application Frontend" width="920"/>
+</p>
+
+#### 🔹 Figure 7: Microservice Catalog REST API Endpoint
+* **Target:** `http://localhost:8888/api/products`
+* **Technical Explanation:** Returns structured JSON product payloads including IDs, names, categories (DevOps, Cloud & AI, OpenSource), pricing, and CDN image references.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113831.png" alt="Catalog REST API Endpoint" width="920"/>
+</p>
+
+#### 🔹 Figure 8: Microservice Liveness & Health Verification API
+* **Target:** `http://localhost:8888/api/health`
+* **Technical Explanation:** Returns HTTP 200 with JSON payload `{ "status": "UP", "service": "ecommerce-app", "version": "1.0.0", "uptime": ... }`. Actively queried by Kubernetes liveness and readiness probes to enforce self-healing and zero downtime.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113809.png" alt="Microservice Health API Endpoint" width="920"/>
+</p>
+
+#### 🔹 Figure 9: Native Prometheus Metrics Exporter Endpoint
+* **Target:** `http://localhost:8888/metrics`
+* **Technical Explanation:** Native OpenMetrics/Prometheus format stream emitted by the application. Exposes `process_uptime_seconds`, `process_resident_memory_bytes` (RSS), `process_heap_bytes`, CPU user/system counters, and HTTP request counters.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113841.png" alt="Prometheus Metrics API Endpoint" width="920"/>
+</p>
+
+---
+
+### 5. Telemetry & Observability (Prometheus & Grafana)
+
+#### 🔹 Figure 10: Prometheus Target Health Console (`serviceMonitor/ecommerce/ecommerce-app`)
+* **Target:** `http://localhost:9090/targets`
+* **Technical Explanation:** Validates that the Prometheus Operator dynamically discovered the application pods via the declarative `ServiceMonitor`. All 3 pod endpoints (`10.244.0.14:3000`, `10.244.0.15:3000`, `10.244.0.16:3000`) report active scraping state **UP (green)** with zero errors.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113219.png" alt="Prometheus ServiceMonitor Targets UP" width="920"/>
+</p>
+
+#### 🔹 Figure 11: Prometheus Scrape Targets Overview
+* **Target:** `http://localhost:9090/targets`
+* **Technical Explanation:** Broad cluster-wide view verifying that Prometheus is actively collecting metrics across node exporters, kube-state-metrics, coredns, apiserver, and the e-commerce workload.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20111234.png" alt="Prometheus Cluster Scrape Pools" width="920"/>
+</p>
+
+#### 🔹 Figure 12: Grafana SRE Dashboard — Ecommerce App CI/CD Overview
+* **Target:** `http://localhost:3000/d/ecommerce-app/ecommerce-app-ci-cd-overview`
+* **Technical Explanation:** Custom-built Grafana operational dashboard providing real-time visibility across 8 panels:
+  * **Pod CPU Usage:** Multi-pod timeseries graph
+  * **Pod Memory Usage:** Resident working set bytes per pod
+  * **Running Pods:** Current healthy pod count (3)
+  * **Deployment Replicas Available:** Target replica status (3)
+  * **Container Restarts:** Failure detection counter (0)
+  * **Network I/O:** Network receive and transmit rates in bytes/sec
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113316.png" alt="Grafana Ecommerce Application Dashboard" width="920"/>
+</p>
+
+#### 🔹 Figure 13: Grafana Cluster Dashboard — Kubernetes Compute Resources (Pods)
+* **Target:** `http://localhost:3000/d/85a562078cdf77779eaa1add43ccec1e/kubernetes-compute-resources-namespace-pods`
+* **Technical Explanation:** Deep infrastructure dashboard displaying pod CPU utilization against requested quotas, memory limits, and network packet throughput filtered specifically to the `ecommerce` namespace.
+
+<p align="center">
+  <img src="images/Screenshot%202026-10-29%20113326.png" alt="Grafana Kubernetes Pods Compute Dashboard" width="920"/>
+</p>
+
 
 ## ⚡ Quick Start
 
