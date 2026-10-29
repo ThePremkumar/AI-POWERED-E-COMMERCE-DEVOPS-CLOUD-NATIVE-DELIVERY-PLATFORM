@@ -18,3 +18,4 @@ spec:
       path: /metrics
       interval: 15s
       scrapeTimeout: 10s
+
