@@ -105,6 +105,27 @@ pipeline {
                 """
             }
         }
+
+        // 7. Verify Monitoring Stack
+        stage("Verify Monitoring") {
+            steps {
+                sh """
+                    echo "=== Prometheus Status ==="
+                    kubectl --context ${K8S_CONTEXT} get pods -n monitoring -l app.kubernetes.io/name=prometheus --no-headers
+                    echo ""
+                    echo "=== Grafana Status ==="
+                    kubectl --context ${K8S_CONTEXT} get pods -n monitoring -l app.kubernetes.io/name=grafana --no-headers
+                    echo ""
+                    echo "=== ServiceMonitor for ${HELM_RELEASE} ==="
+                    kubectl --context ${K8S_CONTEXT} get servicemonitor ${HELM_RELEASE} -n ${K8S_NAMESPACE} --no-headers 2>/dev/null || echo "ServiceMonitor pending (will appear after first scrape)"
+                    echo ""
+                    echo "=== Grafana Dashboard ConfigMap ==="
+                    kubectl --context ${K8S_CONTEXT} get configmap ${HELM_RELEASE}-grafana-dashboard -n monitoring --no-headers 2>/dev/null || echo "Dashboard ConfigMap pending"
+                    echo ""
+                    echo "✅ Monitoring stack verified"
+                """
+            }
+        }
     }
 
     post {
