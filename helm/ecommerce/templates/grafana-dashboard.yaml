@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-grafana-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"     # Grafana sidecar picks this up automatically
+data:
+  ecommerce-dashboard.json: |-
+    {
+      "id": null,
+      "uid": "ecommerce-app",
+      "title": "Ecommerce App - CI/CD Overview",
+      "tags": ["ecommerce", "kubernetes", "nodejs"],
+      "timezone": "browser",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "10s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Pod CPU Usage",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"ecommerce\", container!=\"\"}[2m])) by (pod)",
+            "legendFormat": "{{`{{pod}}`}}"
+          }],
+          "fieldConfig": {
+            "defaults": { "unit": "percentunit", "color": { "mode": "palette-classic" } }
+          }
+        },
+        {
+          "id": 2,
+          "title": "Pod Memory Usage",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "sum(container_memory_working_set_bytes{namespace=\"ecommerce\", container!=\"\"}) by (pod)",
+            "legendFormat": "{{`{{pod}}`}}"
+          }],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" } }
+          }
+        },
+        {
+          "id": 3,
+          "title": "Running Pods",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{namespace=\"ecommerce\", phase=\"Running\"})",
+            "legendFormat": "Running"
+          }],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 3 }
+            ]}}
+          }
+        },
+        {
+          "id": 4,
+          "title": "Deployment Replicas Available",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "kube_deployment_status_replicas_available{namespace=\"ecommerce\", deployment=\"ecommerce-app\"}",
+            "legendFormat": "Available"
+          }],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]}}
+          }
+        },
+        {
+          "id": 5,
+          "title": "Network Receive (bytes/s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"ecommerce\"}[2m])) by (pod)",
+            "legendFormat": "{{`{{pod}}`}}"
+          }],
+          "fieldConfig": { "defaults": { "unit": "Bps" } }
+        },
+        {
+          "id": 6,
+          "title": "Network Transmit (bytes/s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"ecommerce\"}[2m])) by (pod)",
+            "legendFormat": "{{`{{pod}}`}}"
+          }],
+          "fieldConfig": { "defaults": { "unit": "Bps" } }
+        },
+        {
+          "id": 7,
+          "title": "Container Restarts",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"ecommerce\"})",
+            "legendFormat": "Restarts"
+          }],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]}}
+          }
+        },
+        {
+          "id": 8,
+          "title": "Image Tag Deployed",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{
+            "expr": "kube_deployment_labels{namespace=\"ecommerce\", deployment=\"ecommerce-app\"}",
+            "legendFormat": "Build"
+          }],
+          "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" } } }
+        }
+      ],
+      "time": { "from": "now-1h", "to": "now" }
+    }
