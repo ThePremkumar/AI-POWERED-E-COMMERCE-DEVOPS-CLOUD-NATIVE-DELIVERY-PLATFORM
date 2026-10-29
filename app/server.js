@@ -80,6 +80,36 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Prometheus Metrics endpoint
+  if (req.url === '/metrics') {
+    const mem = process.memoryUsage();
+    const cpu = process.cpuUsage();
+    const metrics = [
+      '# HELP process_uptime_seconds Process uptime in seconds.',
+      '# TYPE process_uptime_seconds gauge',
+      `process_uptime_seconds ${process.uptime()}`,
+      '# HELP process_resident_memory_bytes Resident memory size in bytes.',
+      '# TYPE process_resident_memory_bytes gauge',
+      `process_resident_memory_bytes ${mem.rss}`,
+      '# HELP process_heap_bytes Process heap size in bytes.',
+      '# TYPE process_heap_bytes gauge',
+      `process_heap_bytes ${mem.heapUsed}`,
+      '# HELP process_cpu_user_seconds_total Total user CPU time spent in seconds.',
+      '# TYPE process_cpu_user_seconds_total counter',
+      `process_cpu_user_seconds_total ${(cpu.user / 1e6).toFixed(4)}`,
+      '# HELP process_cpu_system_seconds_total Total system CPU time spent in seconds.',
+      '# TYPE process_cpu_system_seconds_total counter',
+      `process_cpu_system_seconds_total ${(cpu.system / 1e6).toFixed(4)}`,
+      '# HELP http_requests_total Total number of HTTP requests made.',
+      '# TYPE http_requests_total counter',
+      'http_requests_total{status="200"} 1'
+    ].join('\n') + '\n';
+
+    res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4' });
+    res.end(metrics);
+    return;
+  }
+
   // Products JSON API endpoint
   if (req.url === '/api/products') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
