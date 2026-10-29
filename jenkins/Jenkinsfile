@@ -1,14 +1,20 @@
+// =============================================================================
+// Jenkinsfile – Simple CI/CD Pipeline
+// AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
+// =============================================================================
+
 pipeline {
     agent any
 
     environment {
         // Registry settings
-        REGISTRY          = "https://index.docker.io/v1/"
+        REGISTRY          = "docker.io"
         IMAGE_NAME        = "thepremkumar/ecommerce-app"
         IMAGE_TAG         = "${env.BUILD_NUMBER}"
 
         // Kubernetes / Helm settings
         K8S_NAMESPACE     = "ecommerce"
+        K8S_CONTEXT       = "kind-k8s"
         HELM_RELEASE      = "ecommerce-app"
         HELM_CHART        = "./helm/ecommerce"
 
@@ -46,34 +52,46 @@ pipeline {
         // 3. Build Docker Image
         stage("Docker Build") {
             steps {
-                script {
-                    def img = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f docker/Dockerfile .")
-                    img.tag("latest")
-                }
+                sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f docker/Dockerfile .
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                """
             }
         }
 
         // 4. Push Image to Docker Hub
+        // Uses withCredentials to login/logout cleanly — avoids Jenkins Docker
+        // plugin registry-URL quirks that cause silent push failures.
         stage("Docker Push") {
             steps {
-                script {
-                    docker.withRegistry(REGISTRY, DOCKER_CREDENTIALS) {
-                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
-                        docker.image("${IMAGE_NAME}:latest").push()
-                    }
+                withCredentials([usernamePassword(
+                    credentialsId: DOCKER_CREDENTIALS,
+                    usernameVariable: "DH_USER",
+                    passwordVariable: "DH_PASS"
+                )]) {
+                    sh """
+                        echo "${DH_PASS}" | docker login ${REGISTRY} -u "${DH_USER}" --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                        docker logout ${REGISTRY}
+                    """
                 }
             }
         }
 
         // 5. Deploy to Local Kubernetes (KinD) via Helm
+        // --kube-context is passed explicitly so every sh step uses the right cluster.
         stage("Deploy to Kubernetes") {
             steps {
                 sh """
                     helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
+                        --kube-context ${K8S_CONTEXT} \
                         --namespace ${K8S_NAMESPACE} \
                         --create-namespace \
+                        --set image.repository=${REGISTRY}/${IMAGE_NAME} \
                         --set image.tag=${IMAGE_TAG} \
-                        --set image.repository=${IMAGE_NAME}
+                        --set image.pullPolicy=Always \
+                        --wait --timeout=3m
                 """
             }
         }
@@ -82,7 +100,8 @@ pipeline {
         stage("Verify Rollout") {
             steps {
                 sh """
-                    kubectl rollout status deployment/${HELM_RELEASE} -n ${K8S_NAMESPACE} --timeout=120s
+                    kubectl --context ${K8S_CONTEXT} rollout status deployment/${HELM_RELEASE} \
+                        -n ${K8S_NAMESPACE} --timeout=120s
                 """
             }
         }
@@ -94,6 +113,10 @@ pipeline {
         }
         failure {
             echo "❌ Pipeline failed at build #${env.BUILD_NUMBER}."
+        }
+        always {
+            // Clean up dangling images to save disk space
+            sh "docker image prune -f || true"
         }
     }
 }

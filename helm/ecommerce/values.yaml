@@ -6,9 +6,12 @@
 replicaCount: 3
 
 image:
-  repository: docker.io/davine-ecommerce/ecommerce-app
+  repository: docker.io/thepremkumar/ecommerce-app
   tag: "latest"
   pullPolicy: Always
+
+imagePullSecrets:
+  - dockerhub-secret
 
 service:
   type: ClusterIP
