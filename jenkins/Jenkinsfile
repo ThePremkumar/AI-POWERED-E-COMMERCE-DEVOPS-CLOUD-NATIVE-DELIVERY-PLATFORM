@@ -7,18 +7,18 @@ pipeline {
     agent any
 
     environment {
-        // Registry settings
-        REGISTRY          = "docker.io"
-        REGISTRY_REPO     = "ai-ecommerce"
-        IMAGE_NAME        = "${REGISTRY}/${REGISTRY_REPO}/ecommerce-app"
-        IMAGE_TAG         = "${env.BUILD_NUMBER}"
+        // Docker Hub settings
+        REGISTRY           = "docker.io"
+        REGISTRY_REPO      = "thepremkumar/ai-ecommerce"
+        IMAGE_NAME         = "${REGISTRY}/${REGISTRY_REPO}"
+        IMAGE_TAG          = "${BUILD_NUMBER}"
 
         // Kubernetes / Helm settings
-        K8S_NAMESPACE     = "ecommerce"
-        HELM_RELEASE      = "ecommerce-app"
-        HELM_CHART        = "./helm/ecommerce"
+        K8S_NAMESPACE      = "ecommerce"
+        HELM_RELEASE       = "ecommerce-app"
+        HELM_CHART         = "./helm/ecommerce"
 
-        // Credentials
+        // Jenkins credential ID
         DOCKER_CREDENTIALS = "dockerhub-creds"
     }
 
@@ -29,23 +29,26 @@ pipeline {
     }
 
     stages {
+
         // 1. Checkout Code
         stage("Checkout") {
             steps {
                 checkout scm
-                sh "echo 'Building #${env.BUILD_NUMBER} on ${env.BRANCH_NAME ?: 'main'}'"
+                sh 'echo "Building Jenkins build #${BUILD_NUMBER}"'
             }
         }
 
         // 2. Build & Test Node.js App
         stage("Build & Test") {
             steps {
-                sh """
+                sh '''
                     if [ -f app/package.json ]; then
-                        npm ci --prefix app/ 2>/dev/null || true
-                        npm test --prefix app/ 2>/dev/null || true
+                        npm ci --prefix app/
+                        npm test --prefix app/
+                    else
+                        echo "No app/package.json found; skipping Node.js tests."
                     fi
-                """
+                '''
             }
         }
 
@@ -53,7 +56,10 @@ pipeline {
         stage("Docker Build") {
             steps {
                 script {
-                    def img = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f docker/Dockerfile .")
+                    def img = docker.build(
+                        "${IMAGE_NAME}:${IMAGE_TAG}",
+                        "-f docker/Dockerfile ."
+                    )
                     img.tag("latest")
                 }
             }
@@ -63,7 +69,10 @@ pipeline {
         stage("Docker Push") {
             steps {
                 script {
-                    docker.withRegistry("https://${REGISTRY}", DOCKER_CREDENTIALS) {
+                    docker.withRegistry(
+                        "https://${REGISTRY}",
+                        DOCKER_CREDENTIALS
+                    ) {
                         docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
                         docker.image("${IMAGE_NAME}:latest").push()
                     }
@@ -71,35 +80,41 @@ pipeline {
             }
         }
 
-        // 5. Deploy to Local Kubernetes (KinD) via Helm
+        // 5. Deploy to Kubernetes using Helm
         stage("Deploy to Kubernetes") {
             steps {
-                sh """
-                    helm upgrade --install ${HELM_RELEASE} ${HELM_CHART} \
-                        --namespace ${K8S_NAMESPACE} \
+                sh '''
+                    helm upgrade --install "$HELM_RELEASE" "$HELM_CHART" \
+                        --namespace "$K8S_NAMESPACE" \
                         --create-namespace \
-                        --set image.tag=${IMAGE_TAG} \
-                        --set image.repository=${IMAGE_NAME}
-                """
+                        --set-string image.tag="$IMAGE_TAG" \
+                        --set-string image.repository="$IMAGE_NAME"
+                '''
             }
         }
 
         // 6. Verify Rollout
         stage("Verify Rollout") {
             steps {
-                sh """
-                    kubectl rollout status deployment/${HELM_RELEASE} -n ${K8S_NAMESPACE} --timeout=120s
-                """
+                sh '''
+                    kubectl rollout status \
+                        deployment/"$HELM_RELEASE" \
+                        -n "$K8S_NAMESPACE" \
+                        --timeout=120s
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "✅ Deployment successful! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "Deployment successful! Image: ${IMAGE_NAME}:${IMAGE_TAG}"
         }
         failure {
-            echo "❌ Pipeline failed at build #${env.BUILD_NUMBER}."
+            echo "Pipeline failed at build #${BUILD_NUMBER}."
+        }
+        always {
+            echo "Pipeline execution completed."
         }
     }
 }
