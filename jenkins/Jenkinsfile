@@ -1,16 +1,10 @@
-// =============================================================================
-// Jenkinsfile – Simple CI/CD Pipeline
-// AI-Powered E-Commerce DevOps & Cloud-Native Delivery Platform
-// =============================================================================
-
 pipeline {
     agent any
 
     environment {
         // Registry settings
-        REGISTRY          = "docker.io"
-        REGISTRY_REPO     = "thepremkumar/ai-ecommerce"
-        IMAGE_NAME        = "${REGISTRY}/${REGISTRY_REPO}/ecommerce-app"
+        REGISTRY          = "https://index.docker.io/v1/"
+        IMAGE_NAME        = "thepremkumar/ecommerce-app"
         IMAGE_TAG         = "${env.BUILD_NUMBER}"
 
         // Kubernetes / Helm settings
@@ -63,7 +57,7 @@ pipeline {
         stage("Docker Push") {
             steps {
                 script {
-                    docker.withRegistry("https://${REGISTRY}", DOCKER_CREDENTIALS) {
+                    docker.withRegistry(REGISTRY, DOCKER_CREDENTIALS) {
                         docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
                         docker.image("${IMAGE_NAME}:latest").push()
                     }
